@@ -1,21 +1,11 @@
 from flask import Flask, render_template, request
 import os
-import whisper
 import subprocess
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
 app = Flask(__name__)
 
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-# Load Whisper model
-whisper_model = whisper.load_model("base")
-
-# Load summarization model (NO pipeline)
-model_name = "facebook/bart-large-cnn"
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model_s = AutoModelForSeq2SeqLM.from_pretrained(model_name)
 
 
 # -----------------------------
@@ -27,36 +17,15 @@ def extract_audio(video_path, audio_path):
     subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 
-def transcribe_audio(audio_path):
-    result = whisper_model.transcribe(audio_path)
-    return result["text"]
+def fake_transcription(audio_path):
+    # TEMP: Replace later with real AI API
+    return "This is a sample transcription of the video. AI will process real content in future."
 
 
-def summarize_text(text):
-    inputs = tokenizer(text, return_tensors="pt", max_length=1024, truncation=True)
-
-    summary_ids = model_s.generate(
-        inputs["input_ids"],
-        max_length=150,
-        min_length=40,
-        length_penalty=2.0,
-        num_beams=4,
-        early_stopping=True
-    )
-
-    return tokenizer.decode(summary_ids[0], skip_special_tokens=True)
-
-
-def summarize_long_text(text):
-    chunk_size = 1000
-    chunks = [text[i:i + chunk_size] for i in range(0, len(text), chunk_size)]
-
-    final_summary = ""
-
-    for chunk in chunks:
-        final_summary += summarize_text(chunk) + "\n"
-
-    return final_summary
+def simple_summary(text):
+    # Simple summary logic (lightweight)
+    sentences = text.split(".")
+    return ". ".join(sentences[:2])  # first 2 sentences as summary
 
 
 # -----------------------------
@@ -80,19 +49,19 @@ def index():
             # Step 1: Extract audio
             extract_audio(video_path, audio_path)
 
-            # Step 2: Transcribe
-            full_text = transcribe_audio(audio_path)
+            # Step 2: Fake transcription
+            full_text = fake_transcription(audio_path)
 
-            # Step 3: Summarize
-            summary_text = summarize_long_text(full_text)
+            # Step 3: Simple summary
+            summary_text = simple_summary(full_text)
 
     return render_template("index.html", full_text=full_text, summary_text=summary_text)
 
 
 # -----------------------------
-# RUN (IMPORTANT FOR DEPLOY)
+# RUN
 # -----------------------------
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))  # Railway/Render compatible
+    port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
