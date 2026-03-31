@@ -1,6 +1,2 @@
 flask
-openai-whisper
-transformers
-torch
-sentencepiece
 ffmpeg-python
